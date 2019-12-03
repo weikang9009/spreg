@@ -9,6 +9,7 @@ import datetime
 from functools import reduce
 import re
 import textwrap
+import copy
 
 from statsmodels.compat.python import (lrange, iterkeys, iteritems, lzip,
                                        itervalues)
@@ -353,11 +354,14 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
     if isinstance(results, tuple):
         results, params, bse, tvalues, pvalues, conf_int = results
     else:
-        if "W_"+results.name_y in results.name_x:
-            name_x = results.name_x
-        else:
-            name_x = results.name_x + ["W_" + results.name_y]
-        # name_x = results.name_x + ["Wy"]
+        varW = "W_"+results.name_y
+        temp = copy.copy(results.name_x)
+        if varW in temp:
+            # name_x = results.name_x
+            temp.remove(varW)
+        name_x = temp + ["Wy"]
+        # else:
+        #     name_x = results.name_x + ["W_" + results.name_y]
 
         params = pd.Series(results.betas.flatten(), index=name_x)
         bse = pd.Series(results.std_err.flatten(), index=name_x)
@@ -410,12 +414,14 @@ def _col_params(result, float_format='%.4f', stars=True):
     # Stack Coefs and Std.Errors
     res = res.iloc[:, :2]
     res = res.iloc[:, :2]
-    rsquared = rsquared_adj = np.nan
-    if hasattr(result, 'rsquared'):
-        rsquared = result.rsquared
-    if hasattr(result, 'rsquared_adj'):
-        rsquared_adj = result.rsquared_adj
-    r_result = pd.DataFrame({'Basic': [rsquared], 'Adj.': [rsquared_adj]},
+    rsquared = result.pr2
+    rsquared_adj = result.pr2_e
+    # rsquared = rsquared_adj = np.nan
+    # if hasattr(result, 'rsquared'):
+    #     rsquared = result.rsquared
+    # if hasattr(result, 'rsquared_adj'):
+    #     rsquared_adj = result.rsquared_adj
+    r_result = pd.DataFrame({'Pseudo R-squared': [rsquared], 'Spatial.': [rsquared_adj]},
                             index=['R-squared'])
     if not np.all(np.isnan(np.asarray(r_result))):
         for col in r_result:
